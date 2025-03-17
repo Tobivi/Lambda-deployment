@@ -26,10 +26,9 @@ jobs:
         run: python -m venv venv && source venv/bin/activate &&
           pip3 install -r requirements.txt
         if: steps.cache-venv.outputs.cache-hit != 'true'
-      # Install all the app dependencies
+      
       - name: Install dependencies
         run: pip3 install -r requirements.txt
-      # Build the app and run tests
       - name: Build and Run Test
         run: . venv/bin/activate && pytest
       - name: Create Zipfile archive of Dependencies
