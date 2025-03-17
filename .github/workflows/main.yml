@@ -10,12 +10,12 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: 3.9.5
+          python-version: 3.9
           architecture: x64
       - name: Install Python Virtual ENV
-        run: pip3 install virtualenv
+        run: pip3 install virtualenv pytest
       - name: Setup Virtual env
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         id: cache-venv
         with:
           path: venv
@@ -24,17 +24,35 @@ jobs:
             ${{ runner.os }}-venv-
       - name: Activate and Install Dependencies into Virtual env
         run: python -m venv venv && source venv/bin/activate &&
-          pip3 install -r requirements.txt
+          pip3 install -r requirements.txt &&
+          pip3 install pytest
         if: steps.cache-venv.outputs.cache-hit != 'true'
       # Install all the app dependencies
       - name: Install dependencies
-        run: pip3 install -r requirements.txt
+        run: |
+          source venv/bin/activate
+          pip3 install -r requirements.txt
+          pip3 install pytest
+      # Set up environment variables for testing
+      - name: Set up environment variables
+        run: |
+          echo "GROQ_API_KEY=${{ secrets.GROQ_API_KEY }}" >> $GITHUB_ENV
+          echo "ONE_INCH_API_KEY=${{ secrets.ONE_INCH_API_KEY }}" >> $GITHUB_ENV
+          echo "PINECONE_API_KEY=${{ secrets.PINECONE_API_KEY }}" >> $GITHUB_ENV
+          echo "PINECONE_INDEX_NAME=${{ secrets.PINECONE_INDEX_NAME }}" >> $GITHUB_ENV
       # Build the app and run tests
       - name: Build and Run Test
-        run: . venv/bin/activate && pytest
+        run: |
+          source venv/bin/activate
+          python -m pytest -v
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          ONE_INCH_API_KEY: ${{ secrets.ONE_INCH_API_KEY }}
+          PINECONE_API_KEY: ${{ secrets.PINECONE_API_KEY }}
+          PINECONE_INDEX_NAME: ${{ secrets.PINECONE_INDEX_NAME }}
       - name: Create Zipfile archive of Dependencies
         run: |
-          cd ./venv/lib/python3.9.5/site-packages
+          cd ./venv/lib/python3.9/site-packages
           zip -r9 ../../../../api.zip .
       - name: Add App to Zipfile
         run: |
@@ -51,7 +69,7 @@ jobs:
             zip -g api.zip requirements.txt
           fi
       - name: Upload zip file artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-artifact@v3
         with:
           name: api
           path: api.zip
@@ -69,7 +87,7 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
       - name: Download Lambda api.zip
-        uses: actions/configure-pages@v4
+        uses: actions/download-artifact@v3
         with:
           name: api
       - name: Upload to S3
@@ -79,8 +97,12 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
       - name: Deploy new Lambda
-        uses: actions/deploy-pages@v4
+        run: aws lambda update-function-code --function-name serverless --s3-bucket crypto-swaptest --s3-key api.zip
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          ONE_INCH_API_KEY: ${{ secrets.ONE_INCH_API_KEY }}
+          PINECONE_API_KEY: ${{ secrets.PINECONE_API_KEY }}
+          PINECONE_INDEX_NAME: ${{ secrets.PINECONE_INDEX_NAME }}
