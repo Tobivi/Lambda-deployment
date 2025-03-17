@@ -1,0 +1,16 @@
+sentence-transformers
+pinecone
+python-dotenv
+groq
+web3
+flashbots
+fastapi
+mangum
+pytest>=6.2.0
+requests>=2.25.0
+starlette>=0.13.6
+toml>=0.10.2
+typing-extensions>=3.7.4.3
+urllib3>=1.26.5
+uvicorn>=0.13.1
+pydantic
