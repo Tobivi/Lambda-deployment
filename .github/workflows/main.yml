@@ -51,7 +51,7 @@ jobs:
             zip -g api.zip requirements.txt
           fi
       - name: Upload zip file artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v1
         with:
           name: api
           path: api.zip
@@ -69,7 +69,7 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
       - name: Download Lambda api.zip
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v1
         with:
           name: api
       - name: Upload to S3
