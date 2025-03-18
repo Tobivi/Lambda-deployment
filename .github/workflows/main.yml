@@ -57,12 +57,19 @@ jobs:
         run: |
           cd ./venv/lib/python3.9/site-packages
           zip -r9 ../../../../dependencies.zip .
-      - name: Upload Dependencies Layer to AWS
+      - name: Upload Dependencies to S3
+        run: |
+          aws s3 cp dependencies.zip s3://my-bucket/dependencies.zip
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
+      - name: Publish Lambda Layer from S3
         run: |
           aws lambda publish-layer-version \
             --layer-name my-dependencies-layer \
             --description "Python dependencies for my Lambda function" \
-            --zip-file fileb://dependencies.zip \
+            --content S3Bucket=my-bucket,S3Key=dependencies.zip \
             --compatible-runtimes python3.9
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -73,7 +80,7 @@ jobs:
           zip -r9 lambda_function.zip lambda_function.py
       - name: Upload Lambda Function Code to S3
         run: |
-          aws s3 cp lambda_function.zip s3://crypto-swaptest/lambda_function.zip
+          aws s3 cp lambda_function.zip s3://my-bucket/lambda_function.zip
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -82,7 +89,7 @@ jobs:
         run: |
           aws lambda update-function-code \
             --function-name serverless \
-            --s3-bucket crypto-swaptest \
+            --s3-bucket my-bucket \
             --s3-key lambda_function.zip
           aws lambda update-function-configuration \
             --function-name serverless \
