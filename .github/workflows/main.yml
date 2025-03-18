@@ -85,15 +85,8 @@ jobs:
     needs: [continuous-integration]
     if: github.ref == 'refs/heads/main'
     steps:
-      - name: Install AWS CLI
-        run: |
-          curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
-          unzip awscliv2.zip
-          sudo ./aws/install
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
+      - name: Verify AWS CLI Installation
+        run: aws --version
       - name: Download Lambda api.zip
         uses: actions/download-artifact@v4
         with:
