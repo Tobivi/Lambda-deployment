@@ -41,6 +41,7 @@ jobs:
           echo "ONE_INCH_API_KEY=${{ secrets.ONE_INCH_API_KEY }}" >> $GITHUB_ENV
           echo "PINECONE_API_KEY=${{ secrets.PINECONE_API_KEY }}" >> $GITHUB_ENV
           echo "PINECONE_INDEX_NAME=${{ secrets.PINECONE_INDEX_NAME }}" >> $GITHUB_ENV
+          echo "ALCHEMY_API_KEY=${{ secrets.ALCHEMY_API_KEY }}" >> $GITHUB_ENV
       - name: Build and Run Test
         run: |
           source venv/bin/activate
@@ -51,59 +52,43 @@ jobs:
           ONE_INCH_API_KEY: ${{ secrets.ONE_INCH_API_KEY }}
           PINECONE_API_KEY: ${{ secrets.PINECONE_API_KEY }}
           PINECONE_INDEX_NAME: ${{ secrets.PINECONE_INDEX_NAME }}
-      - name: Create Zipfile archive of Dependencies
+          ALCHEMY_API_KEY: ${{ secrets.ALCHEMY_API_KEY }}
+      - name: Create Dependencies Layer
         run: |
           cd ./venv/lib/python3.9/site-packages
-          zip -r9 ../../../../api.zip .
-      - name: Debug Check api.zip
+          zip -r9 ../../../../dependencies.zip .
+      - name: Upload Dependencies Layer to AWS
         run: |
-          if [ -f "api.zip" ]; then
-            echo "api.zip exists"
-            unzip -l api.zip
-          else
-            echo "api.zip does not exist"
-            exit 1
-          fi
-      - name: Add App to Zipfile
-        run: |
-          zip -g api.zip -r api
-          for module in query_engine.py data_fetcher.py vector_store.py swap_executor.py; do
-            if [ -f "$module" ]; then
-              zip -g api.zip "$module"
-            fi
-          done
-          if [ -f "requirements.txt" ]; then
-            zip -g api.zip requirements.txt
-          fi
-      - name: Upload zip file artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: api
-          path: api.zip
-  continuous-deployment:
-    runs-on: ubuntu-latest
-    needs: [continuous-integration]
-    if: github.ref == 'refs/heads/main'
-    steps:
-      - name: Verify AWS CLI Installation
-        run: aws --version
-      - name: Download Lambda api.zip
-        uses: actions/download-artifact@v4
-        with:
-          name: api
-      - name: Upload to S3
-        run: aws s3 cp api.zip s3://crypto-swaptest/api.zip
+          aws lambda publish-layer-version \
+            --layer-name my-dependencies-layer \
+            --description "Python dependencies for my Lambda function" \
+            --zip-file fileb://dependencies.zip \
+            --compatible-runtimes python3.9
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
-      - name: Deploy new Lambda
-        run: aws lambda update-function-code --function-name serverless --s3-bucket crypto-swaptest --s3-key api.zip
+      - name: Create Lambda Function Code Zip
+        run: |
+          zip -r9 lambda_function.zip lambda_function.py
+      - name: Upload Lambda Function Code to S3
+        run: |
+          aws s3 cp lambda_function.zip s3://crypto-swaptest/lambda_function.zip
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
-          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
-          ONE_INCH_API_KEY: ${{ secrets.ONE_INCH_API_KEY }}
-          PINECONE_API_KEY: ${{ secrets.PINECONE_API_KEY }}
-          PINECONE_INDEX_NAME: ${{ secrets.PINECONE_INDEX_NAME }}
+      - name: Deploy Lambda Function
+        run: |
+          aws lambda update-function-code \
+            --function-name serverless \
+            --s3-bucket crypto-swaptest \
+            --s3-key lambda_function.zip
+          aws lambda update-function-configuration \
+            --function-name serverless \
+            --layers arn:aws:lambda:$AWS_DEFAULT_REGION:$AWS_ACCOUNT_ID:layer:my-dependencies-layer:1
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
+          AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
