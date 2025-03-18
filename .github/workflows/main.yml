@@ -23,28 +23,32 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-venv-
       - name: Activate and Install Dependencies into Virtual env
-        run: python -m venv venv && source venv/bin/activate &&
-          pip3 install -r requirements.txt &&
-          pip3 install pytest
+        run: |
+          python -m venv venv
+          source venv/bin/activate
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest
         if: steps.cache-venv.outputs.cache-hit != 'true'
-      # Install all the app dependencies
       - name: Install dependencies
         run: |
           source venv/bin/activate
-          pip3 install -r requirements.txt
-          pip3 install pytest
-      # Set up environment variables for testing
+          pip install -r requirements.txt
+          pip install pytest
       - name: Set up environment variables
         run: |
           echo "GROQ_API_KEY=${{ secrets.GROQ_API_KEY }}" >> $GITHUB_ENV
           echo "ONE_INCH_API_KEY=${{ secrets.ONE_INCH_API_KEY }}" >> $GITHUB_ENV
           echo "PINECONE_API_KEY=${{ secrets.PINECONE_API_KEY }}" >> $GITHUB_ENV
           echo "PINECONE_INDEX_NAME=${{ secrets.PINECONE_INDEX_NAME }}" >> $GITHUB_ENV
-      # Build the app and run tests
+      - name: Debug File Structure
+        run: |
+          ls -R  # List all files recursively
       - name: Build and Run Test
         run: |
           source venv/bin/activate
-          python -m pytest -v
+          python -m pytest -v test_api.py
+        working-directory: ./  # Ensure this is the root directory
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           ONE_INCH_API_KEY: ${{ secrets.ONE_INCH_API_KEY }}
@@ -56,15 +60,12 @@ jobs:
           zip -r9 ../../../../api.zip .
       - name: Add App to Zipfile
         run: |
-          # Make sure all the necessary modules and dependencies are included
           zip -g api.zip -r api
-          # Ensure we include any modules in the root directory that might be imported
           for module in query_engine.py data_fetcher.py vector_store.py swap_executor.py; do
             if [ -f "$module" ]; then
               zip -g api.zip "$module"
             fi
           done
-          # Add any other necessary files
           if [ -f "requirements.txt" ]; then
             zip -g api.zip requirements.txt
           fi
