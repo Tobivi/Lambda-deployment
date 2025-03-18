@@ -59,6 +59,7 @@ jobs:
         run: |
           if [ -f "api.zip" ]; then
             echo "api.zip exists"
+            unzip -l api.zip
           else
             echo "api.zip does not exist"
           fi
@@ -74,7 +75,7 @@ jobs:
             zip -g api.zip requirements.txt
           fi
       - name: Upload zip file artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-artifact@v3
         with:
           name: api
           path: api.zip
