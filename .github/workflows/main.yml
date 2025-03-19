@@ -51,16 +51,33 @@ jobs:
           ALCHEMY_API_KEY: ${{ secrets.ALCHEMY_API_KEY }}
       - name: Package Application for Lambda
         run: |
-          mkdir -p package
-          cp -r api package/
-          cp *.py package/
-          cp requirements.txt package/
-          cd package
-          # Create a slim zip with just the application code
+          # Create a wrapper lambda_function.py that points to our handler
+          echo 'import sys' > lambda_function.py
+          echo 'sys.path.append("/var/task")' >> lambda_function.py
+          echo 'from api.main import lambda_handler' >> lambda_function.py
+          
+          # Create deployment package directory
+          mkdir -p deployment
+          
+          # Copy the lambda wrapper
+          cp lambda_function.py deployment/
+          
+          # Copy the api folder containing main.py
+          cp -r api deployment/
+          
+          # Copy all Python modules from root
+          cp *.py deployment/ || echo "Some Python files may not exist"
+          
+          # Copy requirements.txt
+          cp requirements.txt deployment/
+          
+          # Create deployment package
+          cd deployment
           zip -r9 ../lambda_function.zip .
-      - name: Verify Lambda Function Zip Contents
-        run: |
-          unzip -l lambda_function.zip
+          cd ..
+          
+          # Check zip size
+          ls -lh lambda_function.zip
       - name: Upload Lambda Function Code to S3
         run: |
           aws s3 cp lambda_function.zip s3://crypto-swaptest/lambda_function.zip
