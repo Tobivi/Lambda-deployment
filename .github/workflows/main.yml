@@ -51,25 +51,22 @@ jobs:
           ALCHEMY_API_KEY: ${{ secrets.ALCHEMY_API_KEY }}
       - name: Package Application for Lambda
         run: |
-          # Create a wrapper lambda_function.py that points to our handler
-          echo 'import sys' > lambda_function.py
-          echo 'sys.path.append("/var/task")' >> lambda_function.py
-          echo 'from api.main import lambda_handler' >> lambda_function.py
-          
           # Create deployment package directory
           mkdir -p deployment
           
-          # Copy the lambda wrapper
-          cp lambda_function.py deployment/
+          # Install dependencies into deployment directory
+          pip install -r requirements.txt -t deployment/
+          
+          # Create a wrapper lambda_function.py that points to our handler
+          echo 'import sys' > deployment/lambda_function.py
+          echo 'sys.path.append("/var/task")' >> deployment/lambda_function.py
+          echo 'from api.main import lambda_handler' >> deployment/lambda_function.py
           
           # Copy the api folder containing main.py
           cp -r api deployment/
           
           # Copy all Python modules from root
           cp *.py deployment/ || echo "Some Python files may not exist"
-          
-          # Copy requirements.txt
-          cp requirements.txt deployment/
           
           # Create deployment package
           cd deployment
