@@ -12,14 +12,12 @@ jobs:
         with:
           python-version: 3.9
           architecture: x64
-      - name: Install Python Virtual ENV
-        run: pip3 install virtualenv pytest
       - name: Setup Virtual env
         uses: actions/cache@v4
         id: cache-venv
         with:
           path: venv
-          key: ${{ runner.os }}-venv-${{ hashFiles('**/requirements*.txt') }}
+          key: ${{ runner.os }}-venv-${{ hashFiles('**/requirements.txt') }}
           restore-keys: |
             ${{ runner.os }}-venv-
       - name: Activate and Install Dependencies into Virtual env
@@ -28,12 +26,15 @@ jobs:
           source venv/bin/activate
           pip install --upgrade pip
           pip install -r requirements.txt
-          pip install pytest
         if: steps.cache-venv.outputs.cache-hit != 'true'
-      - name: Install dependencies
+      - name: Install dependencies if cache missed
         run: |
           source venv/bin/activate
           pip install -r requirements.txt
+        if: steps.cache-venv.outputs.cache-hit != 'true'
+      - name: Add pytest for testing only
+        run: |
+          source venv/bin/activate
           pip install pytest
       - name: Set up environment variables
         run: |
@@ -66,7 +67,6 @@ jobs:
           cp -r dependencies/* package/
           cd package
           zip -r9 ../lambda_function.zip .
-          ls -lh ../lambda_function.zip  # Debugging: Verify the .zip file
       - name: Verify Lambda Function Zip Contents
         run: |
           unzip -l lambda_function.zip
