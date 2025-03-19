@@ -51,10 +51,11 @@ jobs:
           ONE_INCH_API_KEY: ${{ secrets.ONE_INCH_API_KEY }}
           PINECONE_API_KEY: ${{ secrets.PINECONE_API_KEY }}
           PINECONE_INDEX_NAME: ${{ secrets.PINECONE_INDEX_NAME }}
-      - name: Package Lambda Function and Dependencies
+      - name: Package Application and Dependencies
         run: |
           mkdir -p package
-          cp -r lambda_function.py package/
+          cp -r api package/
+          cp *.py package/
           cp -r venv/lib/python3.9/site-packages/* package/
           cd package
           zip -r9 ../lambda_function.zip .
