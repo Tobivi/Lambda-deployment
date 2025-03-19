@@ -53,12 +53,17 @@ jobs:
           PINECONE_API_KEY: ${{ secrets.PINECONE_API_KEY }}
           PINECONE_INDEX_NAME: ${{ secrets.PINECONE_INDEX_NAME }}
           ALCHEMY_API_KEY: ${{ secrets.ALCHEMY_API_KEY }}
+      - name: Create Clean Dependencies Directory
+        run: |
+          mkdir -p dependencies
+          source venv/bin/activate
+          pip install -r requirements.txt --target ./dependencies
       - name: Package Application and Dependencies
         run: |
           mkdir -p package
           cp -r api package/
           cp *.py package/
-          cp -r venv/lib/python3.9/site-packages/* package/
+          cp -r dependencies/* package/
           cd package
           zip -r9 ../lambda_function.zip .
           ls -lh ../lambda_function.zip  # Debugging: Verify the .zip file
