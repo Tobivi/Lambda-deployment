@@ -51,31 +51,13 @@ jobs:
           ONE_INCH_API_KEY: ${{ secrets.ONE_INCH_API_KEY }}
           PINECONE_API_KEY: ${{ secrets.PINECONE_API_KEY }}
           PINECONE_INDEX_NAME: ${{ secrets.PINECONE_INDEX_NAME }}
-      - name: Create Dependencies Layer
+      - name: Package Lambda Function and Dependencies
         run: |
-          cd ./venv/lib/python3.9/site-packages
-          zip -r9 ../../../../dependencies.zip .
-      - name: Upload Dependencies to S3
-        run: |
-          aws s3 cp dependencies.zip s3://crypto-swaptest/dependencies.zip
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
-      - name: Publish Lambda Layer from S3
-        run: |
-          aws lambda publish-layer-version \
-            --layer-name my-dependencies-layer \
-            --description "Python dependencies for my Lambda function" \
-            --content S3Bucket=crypto-swaptest,S3Key=dependencies.zip \
-            --compatible-runtimes python3.9
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
-      - name: Create Lambda Function Code Zip
-        run: |
-          zip -r9 lambda_function.zip lambda_function.py
+          mkdir -p package
+          cp -r lambda_function.py package/
+          cp -r venv/lib/python3.9/site-packages/* package/
+          cd package
+          zip -r9 ../lambda_function.zip .
       - name: Upload Lambda Function Code to S3
         run: |
           aws s3 cp lambda_function.zip s3://crypto-swaptest/lambda_function.zip
@@ -89,11 +71,7 @@ jobs:
             --function-name serverless \
             --s3-bucket crypto-swaptest \
             --s3-key lambda_function.zip
-          aws lambda update-function-configuration \
-            --function-name serverless \
-            --layers arn:aws:lambda:$AWS_DEFAULT_REGION:$AWS_ACCOUNT_ID:layer:my-dependencies-layer:1
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
-          AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
