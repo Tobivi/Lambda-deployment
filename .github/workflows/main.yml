@@ -41,6 +41,7 @@ jobs:
           echo "ONE_INCH_API_KEY=${{ secrets.ONE_INCH_API_KEY }}" >> $GITHUB_ENV
           echo "PINECONE_API_KEY=${{ secrets.PINECONE_API_KEY }}" >> $GITHUB_ENV
           echo "PINECONE_INDEX_NAME=${{ secrets.PINECONE_INDEX_NAME }}" >> $GITHUB_ENV
+          echo "ALCHEMY_API_KEY=${{ secrets.ALCHEMY_API_KEY }}" >> $GITHUB_ENV
       - name: Build and Run Test
         run: |
           source venv/bin/activate
@@ -51,6 +52,7 @@ jobs:
           ONE_INCH_API_KEY: ${{ secrets.ONE_INCH_API_KEY }}
           PINECONE_API_KEY: ${{ secrets.PINECONE_API_KEY }}
           PINECONE_INDEX_NAME: ${{ secrets.PINECONE_INDEX_NAME }}
+          ALCHEMY_API_KEY: ${{ secrets.ALCHEMY_API_KEY }}
       - name: Package Application and Dependencies
         run: |
           mkdir -p package
@@ -59,6 +61,10 @@ jobs:
           cp -r venv/lib/python3.9/site-packages/* package/
           cd package
           zip -r9 ../lambda_function.zip .
+          ls -lh ../lambda_function.zip  # Debugging: Verify the .zip file
+      - name: Verify Lambda Function Zip Contents
+        run: |
+          unzip -l lambda_function.zip
       - name: Upload Lambda Function Code to S3
         run: |
           aws s3 cp lambda_function.zip s3://crypto-swaptest/lambda_function.zip
